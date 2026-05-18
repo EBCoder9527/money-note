@@ -11,6 +11,7 @@ import {
   exportBackupJson,
   importTransactions,
   restoreBackup,
+  type ImportTransactionsResult,
   type ImportPreviewRow,
   type TransactionImportPreview,
 } from '@/utils/backup';
@@ -41,6 +42,7 @@ export function SettingsPage({
   const [isImporting, setIsImporting] = useState(false);
   const [backupFileToImport, setBackupFileToImport] = useState<File | null>(null);
   const [transactionImportPreview, setTransactionImportPreview] = useState<TransactionImportPreview | null>(null);
+  const [transactionImportResult, setTransactionImportResult] = useState<ImportTransactionsResult | null>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const transactionInputRef = useRef<HTMLInputElement>(null);
   const monthKey = selectedMonth;
@@ -169,6 +171,27 @@ export function SettingsPage({
     }
   }
 
+  function handleDownloadImportTemplate() {
+    setMessage('');
+    setError('');
+
+    const headers = ['amount', 'type', 'category', 'parentCategory', 'note', 'date', 'account'];
+    const example = ['28.50', 'expense', '餐饮', '生活', '午餐', '2026-05-19 12:30:00', '支付宝'];
+    const content = `\uFEFF${headers.join(',')}\n${example.join(',')}\n`;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = '有数账单导入模板.csv';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setMessage('标准导入模板已下载');
+  }
+
   function cancelImportTransactions() {
     setTransactionImportPreview(null);
   }
@@ -186,9 +209,8 @@ export function SettingsPage({
 
     try {
       const result = await importTransactions(preview);
-      setMessage(
-        `导入完成：新增流水 ${result.imported} 条，跳过重复 ${result.skippedDuplicates} 条，异常 ${result.invalidRecords} 条，新建分类 ${result.createdCategories} 个，账户 ${result.createdAccounts} 个`,
-      );
+      setTransactionImportResult(result);
+      setMessage('账单导入完成');
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : '导入账单失败，请稍后再试');
     } finally {
@@ -265,6 +287,18 @@ export function SettingsPage({
             disabled={isBackingUp || isImporting}
             onClick={() => transactionInputRef.current?.click()}
           />
+          <SettingsActionRow
+            icon="模"
+            title="标准导入模板下载"
+            description="下载标准字段模板：amount,type,category,parentCategory,note,date,account。"
+            actionLabel="下载"
+            disabled={isBackingUp || isImporting}
+            onClick={handleDownloadImportTemplate}
+          />
+          <div className="bg-[#F7FBF9] p-4 text-sm leading-6 text-[#6f8178]">
+            <p className="font-semibold text-[#17352a]">导入字段说明</p>
+            <p className="mt-1">type 支持 expense/income 或 支出/收入；amount 统一填写正数；date 支持 YYYY-MM-DD HH:mm:ss。</p>
+          </div>
           <input
             ref={backupInputRef}
             type="file"
@@ -344,7 +378,60 @@ export function SettingsPage({
         onCancel={cancelImportTransactions}
         onConfirm={() => void confirmImportTransactions()}
       />
+      <TransactionImportResultDialog
+        result={transactionImportResult}
+        onClose={() => setTransactionImportResult(null)}
+      />
     </main>
+  );
+}
+
+type TransactionImportResultDialogProps = {
+  result: ImportTransactionsResult | null;
+  onClose: () => void;
+};
+
+function TransactionImportResultDialog({ result, onClose }: TransactionImportResultDialogProps) {
+  if (!result) {
+    return null;
+  }
+
+  const timeRange =
+    result.startDate && result.endDate
+      ? result.startDate === result.endDate
+        ? result.startDate
+        : `${result.startDate} 至 ${result.endDate}`
+      : '无可导入记录';
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-[#17352a]/30 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-8 sm:items-center">
+      <section className="w-full max-w-xl rounded-[1.75rem] bg-white p-5 shadow-[0_24px_70px_rgba(23,53,42,0.22)]">
+        <p className="text-sm font-semibold text-[#4CB782]">导入结果</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-normal text-[#17352a]">账单导入完成</h2>
+        <p className="mt-2 text-sm leading-6 text-[#7a8d84]">
+          已按预览结果写入本地数据，重复和异常记录没有导入。
+        </p>
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <PreviewMetric label="成功导入" value={`${result.imported} 条`} />
+          <PreviewMetric label="跳过重复" value={`${result.skippedDuplicates} 条`} tone="warning" />
+          <PreviewMetric label="失败" value={`${result.invalidRecords} 条`} tone="danger" />
+          <PreviewMetric label="时间范围" value={timeRange} />
+          <PreviewMetric label="支出合计" value={formatCurrency(result.expenseTotal)} tone="expense" />
+          <PreviewMetric label="收入合计" value={formatCurrency(result.incomeTotal)} />
+          <PreviewMetric label="新增分类" value={`${result.createdCategories} 个`} />
+          <PreviewMetric label="新增账户" value={`${result.createdAccounts} 个`} />
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 h-12 w-full rounded-[1.25rem] bg-[#4CB782] text-base font-semibold text-white shadow-[0_16px_34px_rgba(76,183,130,0.24)]"
+        >
+          知道了
+        </button>
+      </section>
+    </div>
   );
 }
 

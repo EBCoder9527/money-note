@@ -82,6 +82,10 @@ export type ImportTransactionsResult = {
   imported: number;
   skippedDuplicates: number;
   invalidRecords: number;
+  expenseTotal: number;
+  incomeTotal: number;
+  startDate?: string;
+  endDate?: string;
   createdCategories: number;
   createdAccounts: number;
 };
@@ -288,8 +292,32 @@ export async function importTransactions(preview: TransactionImportPreview): Pro
     imported: rowsToImport.length,
     skippedDuplicates: preview.duplicateRecords,
     invalidRecords: preview.invalidRecords,
+    expenseTotal: preview.expenseTotal,
+    incomeTotal: preview.incomeTotal,
+    startDate: getImportRange(rowsToImport).startDate,
+    endDate: getImportRange(rowsToImport).endDate,
     createdCategories,
     createdAccounts,
+  };
+}
+
+function getImportRange(rows: ImportPreviewRow[]): { startDate?: string; endDate?: string } {
+  if (rows.length === 0) {
+    return {};
+  }
+
+  const timestamps = rows
+    .map((row) => dayjs(row.occurredAt).valueOf())
+    .filter((timestamp) => Number.isFinite(timestamp))
+    .sort((a, b) => a - b);
+
+  if (timestamps.length === 0) {
+    return {};
+  }
+
+  return {
+    startDate: dayjs(timestamps[0]).format('YYYY-MM-DD'),
+    endDate: dayjs(timestamps[timestamps.length - 1]).format('YYYY-MM-DD'),
   };
 }
 
