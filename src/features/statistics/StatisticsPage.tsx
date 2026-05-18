@@ -183,7 +183,7 @@ function DailyExpenseCalendar({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1">
         {calendarCells.map((cell, index) =>
           cell ? (
             <CalendarDayButton
@@ -194,7 +194,7 @@ function DailyExpenseCalendar({
               onSelectDate={onSelectDate}
             />
           ) : (
-            <div key={`empty-${index}`} className="min-h-[4.1rem]" />
+            <div key={`empty-${index}`} className="min-h-[4.5rem]" />
           ),
         )}
       </div>
@@ -214,7 +214,7 @@ function CalendarDayButton({ day, isSelected, isToday, onSelectDate }: CalendarD
     <button
       type="button"
       onClick={() => onSelectDate(day.date)}
-      className={`flex min-h-[4.1rem] min-w-0 flex-col justify-between rounded-2xl border p-1.5 text-left transition active:scale-[0.98] ${
+      className={`flex min-h-[4.5rem] min-w-0 flex-col justify-between rounded-2xl border p-1.5 text-left transition active:scale-[0.98] ${
         isSelected
           ? 'border-[#4CB782] bg-[#E7F6EE]'
           : isToday
@@ -234,7 +234,7 @@ function CalendarDayButton({ day, isSelected, isToday, onSelectDate }: CalendarD
       </div>
       {day.hasExpense ? (
         <p
-          className="mt-1 max-w-full truncate rounded-full bg-[#fff0ec] px-1.5 py-0.5 text-center text-[0.68rem] font-bold leading-4 text-[#d65a54]"
+          className="mt-1 w-full rounded-full bg-[#fff0ec] px-0.5 py-0.5 text-center text-[0.62rem] font-bold leading-4 tracking-normal text-[#d65a54] tabular-nums"
           title={formatCurrency(day.amount)}
         >
           {formatCalendarAmount(day.amount)}
