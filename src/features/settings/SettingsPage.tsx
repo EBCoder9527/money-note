@@ -1,7 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react';
 import dayjs from 'dayjs';
 import { AppLogo } from '@/components/AppLogo';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
+import { Toast } from '@/components/Toast';
 import { db } from '@/data/db';
 import type { Category } from '@/data/models';
 import { exportBackupJson, importBackupJson } from '@/utils/backup';
@@ -30,6 +32,7 @@ export function SettingsPage({
   const [isExporting, setIsExporting] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [backupFileToImport, setBackupFileToImport] = useState<File | null>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const monthKey = selectedMonth;
   const monthLabel = getMonthLabel(selectedMonth);
@@ -94,18 +97,23 @@ export function SettingsPage({
 
     setMessage('');
     setError('');
+    setBackupFileToImport(file);
+  }
 
-    const confirmed = window.confirm(
-      '导入备份会合并写入本地数据：同 ID 数据将更新，不同 ID 数据将新增。不会清空现有数据。确定继续吗？',
-    );
+  function cancelImportBackup() {
+    setBackupFileToImport(null);
+    if (backupInputRef.current) {
+      backupInputRef.current.value = '';
+    }
+  }
 
-    if (!confirmed) {
-      if (backupInputRef.current) {
-        backupInputRef.current.value = '';
-      }
+  async function confirmImportBackup() {
+    if (!backupFileToImport) {
       return;
     }
 
+    const file = backupFileToImport;
+    setBackupFileToImport(null);
     setIsImporting(true);
 
     try {
@@ -125,6 +133,7 @@ export function SettingsPage({
 
   return (
     <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
+      <Toast message={message} onClose={() => setMessage('')} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
           {onBack ? (
@@ -144,12 +153,6 @@ export function SettingsPage({
           {onBack ? <h1 className="text-xl font-semibold tracking-normal">我的</h1> : null}
           <div className="w-16" />
         </header>
-
-        {message ? (
-          <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
-            {message}
-          </div>
-        ) : null}
 
         {error ? (
           <div className="rounded-2xl border border-[#f3b4a8] bg-[#fff0ec] p-4 text-sm font-semibold text-[#8f2c18]">
@@ -247,6 +250,14 @@ export function SettingsPage({
           />
         </SettingsGroup>
       </div>
+      <ConfirmDialog
+        open={Boolean(backupFileToImport)}
+        title="导入备份数据？"
+        description="导入备份会合并写入本地数据：同 ID 数据将更新，不同 ID 数据将新增。不会清空现有数据。"
+        confirmLabel="导入"
+        onCancel={cancelImportBackup}
+        onConfirm={() => void confirmImportBackup()}
+      />
     </main>
   );
 }

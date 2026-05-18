@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import { AppLogo } from '@/components/AppLogo';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
+import { Toast } from '@/components/Toast';
 import { useHomeDashboard, type HomeDashboardData, type RecentTransaction } from './useHomeDashboard';
 import { formatCurrency } from '@/utils/money';
 
@@ -8,6 +9,7 @@ type HomePageProps = {
   selectedMonth: string;
   onMonthChange: (month: string) => void;
   successMessage?: string;
+  onSuccessMessageClose?: () => void;
   onCreateTransaction: () => void;
   onManageBudget: () => void;
   onOpenStatistics: () => void;
@@ -18,6 +20,7 @@ export function HomePage({
   selectedMonth,
   onMonthChange,
   successMessage,
+  onSuccessMessageClose,
   onCreateTransaction,
   onManageBudget,
   onOpenStatistics,
@@ -27,14 +30,10 @@ export function HomePage({
 
   return (
     <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
+      <Toast message={successMessage ?? ''} onClose={onSuccessMessageClose ?? (() => undefined)} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <HomeHeader />
         <MonthSwitcher selectedMonth={selectedMonth} onChange={onMonthChange} />
-        {successMessage ? (
-          <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
-            {successMessage}
-          </div>
-        ) : null}
         <MonthOverview dashboard={dashboard} onManageBudget={onManageBudget} />
         <QuickActions
           onCreateTransaction={onCreateTransaction}

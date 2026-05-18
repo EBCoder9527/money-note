@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { liveQuery } from 'dexie';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Toast } from '@/components/Toast';
 import { db } from '@/data/db';
 import type { Category } from '@/data/models';
 import { categoryRepository } from '@/data/repositories';
@@ -27,6 +29,7 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
 
   useEffect(() => {
     void categoryRepository.ensureDefaultCategories();
@@ -89,7 +92,7 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
     }
   }
 
-  async function handleDelete(category: Category) {
+  function requestDelete(category: Category) {
     setMessage('');
     setError('');
 
@@ -98,20 +101,17 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
       return;
     }
 
-    const confirmed = window.confirm(
-      `确定删除“${category.name}”吗？如果它已被历史账单使用，将只从新增账单分类中隐藏，不会影响历史账单。`,
-    );
+    setCategoryToDelete(category);
+  }
 
-    if (!confirmed) {
-      return;
-    }
-
+  async function handleDelete(category: Category) {
     try {
       await categoryRepository.remove(category.id);
       if (editingCategoryId === category.id) {
         setEditingCategoryId(null);
         setForm(initialForm);
       }
+      setCategoryToDelete(null);
       setMessage('分类已删除');
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : '删除失败，请稍后再试。');
@@ -136,6 +136,7 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
 
   return (
     <main className="min-h-screen bg-[#F7FBF9] text-[#17352a]">
+      <Toast message={message} onClose={() => setMessage('')} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
           <button
@@ -244,7 +245,7 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleDelete(category)}
+                      onClick={() => requestDelete(category)}
                       className="rounded-full bg-[#fff0ec] px-3 py-2 text-sm font-semibold text-[#8f2c18]"
                     >
                       删除
@@ -256,18 +257,25 @@ export function CategoryManagementPage({ onBack }: CategoryManagementPageProps) 
           </ul>
         </section>
 
-        {message ? (
-          <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
-            {message}
-          </div>
-        ) : null}
-
         {error ? (
           <div className="rounded-2xl border border-[#f3b4a8] bg-[#fff0ec] p-4 text-sm font-semibold text-[#8f2c18]">
             {error}
           </div>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={Boolean(categoryToDelete)}
+        title="删除分类？"
+        description={`确定删除“${categoryToDelete?.name ?? ''}”吗？如果它已被历史账单使用，将只从新增账单分类中隐藏，不会影响历史账单。`}
+        confirmLabel="删除"
+        variant="danger"
+        onCancel={() => setCategoryToDelete(null)}
+        onConfirm={() => {
+          if (categoryToDelete) {
+            void handleDelete(categoryToDelete);
+          }
+        }}
+      />
     </main>
   );
 }

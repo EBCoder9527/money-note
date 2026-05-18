@@ -1,4 +1,5 @@
 import { useMemo, useState, type InputHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import dayjs from 'dayjs';
 
 type DateInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & {
@@ -228,79 +229,118 @@ function CustomDatePicker({ id, name, value, className = '', onValueChange }: Cu
         </span>
       </button>
 
-      {isOpen ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 rounded-[1.5rem] border border-[#dcefe6] bg-white p-4 shadow-[0_22px_55px_rgba(23,53,42,0.16)]">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setVisibleMonth((current) => current.subtract(1, 'month'))}
-              className="h-10 w-10 rounded-full bg-[#EAF7F1] text-lg font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
-              aria-label="上个月"
-            >
-              ‹
-            </button>
-            <div className="text-base font-semibold text-[#17352a]">{visibleMonth.format('YYYY年M月')}</div>
-            <button
-              type="button"
-              onClick={() => setVisibleMonth((current) => current.add(1, 'month'))}
-              className="h-10 w-10 rounded-full bg-[#EAF7F1] text-lg font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
-              aria-label="下个月"
-            >
-              ›
-            </button>
-          </div>
+      {isOpen
+        ? createPortal(
+            <DatePickerDrawer
+              days={days}
+              value={value}
+              visibleMonth={visibleMonth}
+              onClose={() => setIsOpen(false)}
+              onSelect={handleSelect}
+              onVisibleMonthChange={setVisibleMonth}
+            />,
+            document.body,
+          )
+        : null}
+    </div>
+  );
+}
 
-          <div className="mt-4 grid grid-cols-7 text-center text-xs font-semibold text-[#7a8d84]">
-            {['一', '二', '三', '四', '五', '六', '日'].map((day) => (
-              <div key={day} className="py-2">
-                {day}
-              </div>
-            ))}
-          </div>
+type DatePickerDrawerProps = {
+  days: dayjs.Dayjs[];
+  value: string;
+  visibleMonth: dayjs.Dayjs;
+  onClose: () => void;
+  onSelect: (value: string) => void;
+  onVisibleMonthChange: React.Dispatch<React.SetStateAction<dayjs.Dayjs>>;
+};
 
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((day) => {
-              const dayValue = day.format('YYYY-MM-DD');
-              const isSelected = dayValue === value;
-              const isCurrentMonth = day.month() === visibleMonth.month();
-
-              return (
-                <button
-                  key={dayValue}
-                  type="button"
-                  onClick={() => handleSelect(dayValue)}
-                  className={`h-10 rounded-full text-sm font-semibold transition ${
-                    isSelected
-                      ? 'border border-[#4CB782] bg-[#EAF7F1] text-[#2f8f66]'
-                      : isCurrentMonth
-                        ? 'text-[#17352a] hover:bg-[#F7FBF9]'
-                        : 'text-[#bdd1c7] hover:bg-[#F7FBF9]'
-                  }`}
-                >
-                  {day.date()}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleSelect(dayjs().format('YYYY-MM-DD'))}
-              className="h-11 rounded-full bg-[#EAF7F1] text-sm font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
-            >
-              今天
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="h-11 rounded-full border border-[#dcefe6] text-sm font-semibold text-[#6f8178] transition hover:border-[#4CB782]"
-            >
-              关闭
-            </button>
-          </div>
+function DatePickerDrawer({
+  days,
+  value,
+  visibleMonth,
+  onClose,
+  onSelect,
+  onVisibleMonthChange,
+}: DatePickerDrawerProps) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end bg-[#17352a]/25 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center">
+      <div
+        className="max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-[1.65rem] border border-[#dcefe6] bg-white p-4 shadow-[0_24px_70px_rgba(23,53,42,0.22)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="选择日期"
+      >
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => onVisibleMonthChange((current) => current.subtract(1, 'month'))}
+            className="h-10 w-10 rounded-full bg-[#EAF7F1] text-lg font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
+            aria-label="上个月"
+          >
+            ‹
+          </button>
+          <div className="text-base font-semibold text-[#17352a]">{visibleMonth.format('YYYY年M月')}</div>
+          <button
+            type="button"
+            onClick={() => onVisibleMonthChange((current) => current.add(1, 'month'))}
+            className="h-10 w-10 rounded-full bg-[#EAF7F1] text-lg font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
+            aria-label="下个月"
+          >
+            ›
+          </button>
         </div>
-      ) : null}
+
+        <div className="mt-4 grid grid-cols-7 text-center text-xs font-semibold text-[#7a8d84]">
+          {['一', '二', '三', '四', '五', '六', '日'].map((day) => (
+            <div key={day} className="py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((day) => {
+            const dayValue = day.format('YYYY-MM-DD');
+            const isSelected = dayValue === value;
+            const isCurrentMonth = day.month() === visibleMonth.month();
+
+            return (
+              <button
+                key={dayValue}
+                type="button"
+                onClick={() => onSelect(dayValue)}
+                className={`h-10 rounded-full text-sm font-semibold transition ${
+                  isSelected
+                    ? 'border border-[#4CB782] bg-[#EAF7F1] text-[#2f8f66]'
+                    : isCurrentMonth
+                      ? 'text-[#17352a] hover:bg-[#F7FBF9]'
+                      : 'text-[#bdd1c7] hover:bg-[#F7FBF9]'
+                }`}
+              >
+                {day.date()}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 pb-[env(safe-area-inset-bottom)]">
+          <button
+            type="button"
+            onClick={() => onSelect(dayjs().format('YYYY-MM-DD'))}
+            className="h-11 rounded-full bg-[#EAF7F1] text-sm font-semibold text-[#2f8f66] transition hover:bg-[#DDF3E8]"
+          >
+            今天
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-full border border-[#dcefe6] text-sm font-semibold text-[#6f8178] transition hover:border-[#4CB782]"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

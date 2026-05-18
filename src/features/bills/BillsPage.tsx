@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { liveQuery } from 'dexie';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import { DateInput } from '@/components/DateInput';
+import { Toast } from '@/components/Toast';
 import { db } from '@/data/db';
 import type { Category, Transaction, TransactionType } from '@/data/models';
 import { categoryRepository, transactionRepository } from '@/data/repositories';
@@ -48,6 +50,7 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
   });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [transactionToDelete, setTransactionToDelete] = useState<TransactionWithCategory | null>(null);
 
   useEffect(() => {
     const { startIso, endIso } = getMonthRangeIso(selectedMonth);
@@ -124,6 +127,8 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
 
   async function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMessage('');
+    setError('');
 
     if (!editingTransaction) {
       return;
@@ -164,16 +169,14 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
   }
 
   async function handleDelete(transaction: TransactionWithCategory) {
-    const confirmed = window.confirm('确定删除这笔流水吗？删除后无法恢复。');
-
-    if (!confirmed) {
-      return;
-    }
+    setMessage('');
+    setError('');
 
     try {
       await transactionRepository.remove(transaction.id);
       setSelectedTransaction(null);
       setEditingTransaction(null);
+      setTransactionToDelete(null);
       setMessage('流水已删除');
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : '删除失败，请稍后再试。');
@@ -182,6 +185,7 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
 
   return (
     <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
+      <Toast message={message} onClose={() => setMessage('')} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
           <div>
@@ -201,12 +205,6 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
         <TransactionSummaryCard summary={summary} />
         <TransactionSearchBar keyword={keyword} onKeywordChange={setKeyword} />
         <TransactionFilterTabs filter={filter} onChange={setFilter} />
-
-        {message ? (
-          <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
-            {message}
-          </div>
-        ) : null}
 
         {error ? (
           <div className="rounded-2xl border border-[#f3b4a8] bg-[#fff0ec] p-4 text-sm font-semibold text-[#8f2c18]">
@@ -241,7 +239,7 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
           transaction={selectedTransaction}
           onClose={() => setSelectedTransaction(null)}
           onEdit={() => openEdit(selectedTransaction)}
-          onDelete={() => void handleDelete(selectedTransaction)}
+          onDelete={() => setTransactionToDelete(selectedTransaction)}
         />
       ) : null}
 
@@ -255,6 +253,20 @@ export function BillsPage({ selectedMonth, onMonthChange, onCreateTransaction }:
           onSubmit={(event) => void handleEditSubmit(event)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(transactionToDelete)}
+        title="删除这笔流水？"
+        description="删除后无法恢复，已有统计和账单列表会同步更新。"
+        confirmLabel="删除"
+        variant="danger"
+        onCancel={() => setTransactionToDelete(null)}
+        onConfirm={() => {
+          if (transactionToDelete) {
+            void handleDelete(transactionToDelete);
+          }
+        }}
+      />
     </main>
   );
 }

@@ -22,3 +22,33 @@ export function formatCurrency(amount: number, currency = 'CNY', locale = 'zh-CN
 export function formatPlainAmount(amount: number): string {
   return normalizeAmount(amount).toFixed(2);
 }
+
+export function formatCalendarAmount(amount: number): string {
+  const normalizedAmount = normalizeAmount(amount);
+
+  if (normalizedAmount >= 10000) {
+    return `${trimCompactNumber(normalizedAmount / 10000)}w`;
+  }
+
+  if (normalizedAmount >= 1000) {
+    return `${trimCompactNumber(normalizedAmount / 1000)}k`;
+  }
+
+  if (normalizedAmount >= 100) {
+    return String(Math.round(normalizedAmount));
+  }
+
+  if (normalizedAmount >= 10) {
+    return normalizedAmount % 1 === 0
+      ? String(Math.round(normalizedAmount))
+      : trimCompactNumber(normalizedAmount);
+  }
+
+  return normalizedAmount % 1 === 0
+    ? String(Math.round(normalizedAmount))
+    : trimCompactNumber(normalizedAmount);
+}
+
+function trimCompactNumber(value: number): string {
+  return value.toFixed(1).replace(/\.0$/, '');
+}

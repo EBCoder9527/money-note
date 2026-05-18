@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import type { Category } from '@/data/models';
-import { formatCurrency, formatPlainAmount } from '@/utils/money';
+import { formatCalendarAmount, formatCurrency, formatPlainAmount } from '@/utils/money';
 import { getMonthLabel } from '@/utils/month';
 import type {
   CategoryExpenseRankingItem,
@@ -194,7 +194,7 @@ function DailyExpenseCalendar({
               onSelectDate={onSelectDate}
             />
           ) : (
-            <div key={`empty-${index}`} className="min-h-[4.35rem]" />
+            <div key={`empty-${index}`} className="min-h-[4.1rem]" />
           ),
         )}
       </div>
@@ -214,7 +214,7 @@ function CalendarDayButton({ day, isSelected, isToday, onSelectDate }: CalendarD
     <button
       type="button"
       onClick={() => onSelectDate(day.date)}
-      className={`min-h-[4.35rem] rounded-2xl border p-1.5 text-left transition active:scale-[0.98] ${
+      className={`flex min-h-[4.1rem] min-w-0 flex-col justify-between rounded-2xl border p-1.5 text-left transition active:scale-[0.98] ${
         isSelected
           ? 'border-[#4CB782] bg-[#E7F6EE]'
           : isToday
@@ -233,8 +233,11 @@ function CalendarDayButton({ day, isSelected, isToday, onSelectDate }: CalendarD
         {day.hasExpense ? <span className="h-1.5 w-1.5 rounded-full bg-[#d65a54]" /> : null}
       </div>
       {day.hasExpense ? (
-        <p className="mt-2 truncate text-[0.68rem] font-semibold text-[#d65a54]">
-          {formatCompactAmount(day.amount)}
+        <p
+          className="mt-1 max-w-full truncate rounded-full bg-[#fff0ec] px-1.5 py-0.5 text-center text-[0.68rem] font-bold leading-4 text-[#d65a54]"
+          title={formatCurrency(day.amount)}
+        >
+          {formatCalendarAmount(day.amount)}
         </p>
       ) : null}
     </button>
@@ -616,16 +619,4 @@ function getDefaultSelectedDate(month: string): string {
   }
 
   return dayjs(`${month}-01`).format('YYYY-MM-DD');
-}
-
-function formatCompactAmount(amount: number): string {
-  if (amount >= 10000) {
-    return `${formatPlainAmount(amount / 10000)}万`;
-  }
-
-  if (amount >= 1000) {
-    return `${Math.round(amount)}`;
-  }
-
-  return formatPlainAmount(amount);
 }

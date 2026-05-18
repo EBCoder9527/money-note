@@ -98,6 +98,7 @@ export function App() {
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         successMessage={successMessage}
+        onSuccessMessageClose={() => setSuccessMessage('')}
         onOpenStatistics={() => {
           setSuccessMessage('');
           setView('statistics');

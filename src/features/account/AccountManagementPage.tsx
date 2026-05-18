@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { liveQuery } from 'dexie';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Toast } from '@/components/Toast';
 import { db } from '@/data/db';
 import type { Account, AccountKind } from '@/data/models';
 import { accountRepository } from '@/data/repositories';
@@ -32,6 +34,7 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<Account | null>(null);
 
   useEffect(() => {
     void accountRepository.ensureDefaultAccounts();
@@ -111,18 +114,13 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
     setMessage('');
     setError('');
 
-    const confirmed = window.confirm(`确定删除“${account.name}”吗？此操作不会影响已有账单数据。`);
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await accountRepository.remove(account.id);
       if (editingAccountId === account.id) {
         setEditingAccountId(null);
         setForm(initialForm);
       }
+      setAccountToDelete(null);
       setMessage('账户已删除');
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : '删除失败，请稍后再试。');
@@ -149,6 +147,7 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
 
   return (
     <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
+      <Toast message={message} onClose={() => setMessage('')} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
           {onBack ? (
@@ -292,7 +291,7 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleDelete(account)}
+                      onClick={() => setAccountToDelete(account)}
                       className="rounded-full bg-[#fff0ec] px-3 py-2 text-xs font-semibold text-[#8f2c18]"
                     >
                       删除
@@ -304,18 +303,25 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
           </ul>
         </section>
 
-        {message ? (
-          <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
-            {message}
-          </div>
-        ) : null}
-
         {error ? (
           <div className="rounded-2xl border border-[#f3b4a8] bg-[#fff0ec] p-4 text-sm font-semibold text-[#8f2c18]">
             {error}
           </div>
         ) : null}
       </div>
+      <ConfirmDialog
+        open={Boolean(accountToDelete)}
+        title="删除资产账户？"
+        description={`确定删除“${accountToDelete?.name ?? ''}”吗？此操作不会影响已有账单数据。`}
+        confirmLabel="删除"
+        variant="danger"
+        onCancel={() => setAccountToDelete(null)}
+        onConfirm={() => {
+          if (accountToDelete) {
+            void handleDelete(accountToDelete);
+          }
+        }}
+      />
     </main>
   );
 }
