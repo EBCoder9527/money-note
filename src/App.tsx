@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BackToTop } from '@/components/BackToTop';
+import { BottomTabNav, type MainTab } from '@/components/BottomTabNav';
 import { SplashScreen } from '@/components/SplashScreen';
 import { AccountManagementPage } from '@/features/account/AccountManagementPage';
+import { BillsPage } from '@/features/bills/BillsPage';
 import { BudgetPage } from '@/features/budget/BudgetPage';
 import { CategoryManagementPage } from '@/features/category/CategoryManagementPage';
 import { HomePage } from '@/features/home/HomePage';
@@ -11,13 +13,13 @@ import { NewTransactionPage } from '@/features/transaction/NewTransactionPage';
 import { getCurrentMonthKey } from '@/utils/month';
 
 type AppView =
-  | 'home'
+  | MainTab
   | 'new-transaction'
   | 'budget'
-  | 'statistics'
-  | 'settings'
   | 'categories'
-  | 'accounts';
+  | 'accounts-detail';
+
+const mainTabs: MainTab[] = ['home', 'bills', 'statistics', 'accounts', 'settings'];
 
 export function App() {
   const [view, setView] = useState<AppView>('home');
@@ -70,28 +72,39 @@ export function App() {
       <SettingsPage
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
-        onOpenAccountManagement={() => setView('accounts')}
         onOpenCategoryManagement={() => setView('categories')}
-        onBack={() => setView('home')}
       />
     );
   } else if (view === 'categories') {
     content = <CategoryManagementPage onBack={() => setView('settings')} />;
-  } else if (view === 'accounts') {
+  } else if (view === 'accounts-detail') {
     content = <AccountManagementPage onBack={() => setView('settings')} />;
+  } else if (view === 'accounts') {
+    content = <AccountManagementPage />;
+  } else if (view === 'bills') {
+    content = (
+      <BillsPage
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth}
+        onCreateTransaction={() => {
+          setSuccessMessage('');
+          setView('new-transaction');
+        }}
+      />
+    );
   } else {
     content = (
       <HomePage
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         successMessage={successMessage}
-        onOpenSettings={() => {
-          setSuccessMessage('');
-          setView('settings');
-        }}
         onOpenStatistics={() => {
           setSuccessMessage('');
           setView('statistics');
+        }}
+        onOpenBills={() => {
+          setSuccessMessage('');
+          setView('bills');
         }}
         onManageBudget={() => {
           setSuccessMessage('');
@@ -108,6 +121,15 @@ export function App() {
   return (
     <>
       {content}
+      {mainTabs.includes(view as MainTab) ? (
+        <BottomTabNav
+          activeTab={view as MainTab}
+          onChange={(nextTab) => {
+            setSuccessMessage('');
+            setView(nextTab);
+          }}
+        />
+      ) : null}
       <BackToTop />
       <SplashScreen />
     </>

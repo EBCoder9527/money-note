@@ -13,6 +13,16 @@ import {
   type PeriodExpenseSummary,
   type TrendPoint,
 } from './statisticsUtils';
+import {
+  getCategoryExpenseRanking,
+  getDailyExpenseSummary,
+  getMonthExpenseTotal,
+  getTransactionExpenseRanking,
+  getTransactionsByDate,
+  type CategoryExpenseRankingItem,
+  type DailyExpenseSummary,
+  type TransactionExpenseRankingItem,
+} from '@/utils/statistics';
 
 dayjs.extend(quarterOfYear);
 
@@ -20,6 +30,11 @@ export type StatisticsData = {
   periodExpenses: PeriodExpenseSummary;
   trend: TrendPoint[];
   categoryShares: CategoryShare[];
+  dailySummary: DailyExpenseSummary[];
+  selectedDateTransactions: TransactionExpenseRankingItem[];
+  categoryRanking: CategoryExpenseRankingItem[];
+  transactionRanking: TransactionExpenseRankingItem[];
+  monthExpenseTotal: number;
   hasExpenseData: boolean;
   isLoading: boolean;
 };
@@ -36,7 +51,7 @@ const emptyPeriodExpenses: PeriodExpenseSummary = {
   year: 0,
 };
 
-export function useStatistics(selectedMonth: string): StatisticsData {
+export function useStatistics(selectedMonth: string, selectedDate: string): StatisticsData {
   const [snapshot, setSnapshot] = useState<StatisticsSnapshot>({
     transactions: [],
     categories: [],
@@ -72,6 +87,11 @@ export function useStatistics(selectedMonth: string): StatisticsData {
         periodExpenses: emptyPeriodExpenses,
         trend: buildLastSevenDaysTrend([], baseDate),
         categoryShares: [],
+        dailySummary: getDailyExpenseSummary([], selectedMonth),
+        selectedDateTransactions: [],
+        categoryRanking: [],
+        transactionRanking: [],
+        monthExpenseTotal: 0,
         hasExpenseData: false,
         isLoading,
       };
@@ -81,8 +101,27 @@ export function useStatistics(selectedMonth: string): StatisticsData {
       periodExpenses: calculatePeriodExpenses(snapshot.transactions, baseDate),
       trend: buildLastSevenDaysTrend(snapshot.transactions, baseDate),
       categoryShares: buildMonthlyCategoryShares(snapshot.transactions, snapshot.categories, baseDate),
+      dailySummary: getDailyExpenseSummary(snapshot.transactions, selectedMonth),
+      selectedDateTransactions: getTransactionsByDate(snapshot.transactions, selectedDate).map(
+        (transaction) => ({
+          ...transaction,
+          category: snapshot.categories.find((category) => category.id === transaction.categoryId),
+        }),
+      ),
+      categoryRanking: getCategoryExpenseRanking(
+        snapshot.transactions,
+        selectedMonth,
+        snapshot.categories,
+      ),
+      transactionRanking: getTransactionExpenseRanking(
+        snapshot.transactions,
+        selectedMonth,
+        10,
+        snapshot.categories,
+      ),
+      monthExpenseTotal: getMonthExpenseTotal(snapshot.transactions, selectedMonth),
       hasExpenseData: true,
       isLoading,
     };
-  }, [baseDate, isLoading, snapshot]);
+  }, [baseDate, isLoading, selectedDate, selectedMonth, snapshot]);
 }

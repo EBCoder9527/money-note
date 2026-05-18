@@ -6,7 +6,7 @@ import { accountRepository } from '@/data/repositories';
 import { formatCurrency, normalizeAmount } from '@/utils/money';
 
 type AccountManagementPageProps = {
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 type AccountFormState = {
@@ -148,17 +148,24 @@ export function AccountManagementPage({ onBack }: AccountManagementPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7FBF9] text-[#17352a]">
+    <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6f8178] shadow-[0_10px_28px_rgba(23,53,42,0.06)] transition hover:text-[#2f8f66]"
-          >
-            返回
-          </button>
-          <h1 className="text-xl font-semibold tracking-normal">资产管理</h1>
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6f8178] shadow-[0_10px_28px_rgba(23,53,42,0.06)] transition hover:text-[#2f8f66]"
+            >
+              返回
+            </button>
+          ) : (
+            <div>
+              <p className="text-sm font-medium text-[#7a8d84]">资产</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-normal">资产账户</h1>
+            </div>
+          )}
+          {onBack ? <h1 className="text-xl font-semibold tracking-normal">资产管理</h1> : null}
           <div className="w-16" />
         </header>
 

@@ -17,6 +17,14 @@ type FormErrors = {
   submit?: string;
 };
 
+type CategoryFormState = {
+  name: string;
+  type: TransactionType;
+  color: string;
+};
+
+const categoryColorOptions = ['#4CB782', '#14b8a6', '#0ea5e9', '#8b5cf6', '#ec4899', '#f97316', '#d65a54', '#64748b'];
+
 export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProps) {
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('');
@@ -26,6 +34,14 @@ export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProp
   const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryForm, setCategoryForm] = useState<CategoryFormState>({
+    name: '',
+    type: 'expense',
+    color: categoryColorOptions[0],
+  });
+  const [categoryError, setCategoryError] = useState('');
+  const [isCategorySaving, setIsCategorySaving] = useState(false);
 
   useEffect(() => {
     void categoryRepository.ensureDefaultCategories().catch(() => {
@@ -104,7 +120,58 @@ export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProp
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType);
     setCategoryId('');
+    setCategoryForm((current) => ({ ...current, type: nextType }));
     setErrors({});
+  }
+
+  function openCategoryModal() {
+    setCategoryForm({
+      name: '',
+      type,
+      color: categoryColorOptions[0],
+    });
+    setCategoryError('');
+    setIsCategoryModalOpen(true);
+  }
+
+  async function handleCreateCategory(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const name = categoryForm.name.trim();
+
+    if (!name) {
+      setCategoryError('请输入分类名称。');
+      return;
+    }
+
+    const duplicated = await categoryRepository
+      .listByType(categoryForm.type)
+      .then((items) => items.some((category) => category.name === name));
+
+    if (duplicated) {
+      setCategoryError('同类型下已经有这个分类了。');
+      return;
+    }
+
+    setIsCategorySaving(true);
+
+    try {
+      const newCategoryId = await categoryRepository.create({
+        name,
+        type: categoryForm.type,
+        color: categoryForm.color,
+        icon: 'circle',
+        isDefault: false,
+      });
+      setType(categoryForm.type);
+      setCategoryId(newCategoryId);
+      setIsCategoryModalOpen(false);
+      setErrors((currentErrors) => ({ ...currentErrors, categoryId: undefined, submit: undefined }));
+    } catch (error) {
+      setCategoryError(error instanceof Error ? error.message : '分类新增失败，请稍后再试。');
+    } finally {
+      setIsCategorySaving(false);
+    }
   }
 
   return (
@@ -174,6 +241,7 @@ export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProp
                   }}
                 />
               ))}
+              <AddCategoryOption onClick={openCategoryModal} />
             </div>
           )}
           {errors.categoryId ? <p className="mt-3 text-sm text-[#d65a54]">{errors.categoryId}</p> : null}
@@ -223,6 +291,17 @@ export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProp
           </div>
         </div>
       </form>
+
+      {isCategoryModalOpen ? (
+        <AddCategoryModal
+          form={categoryForm}
+          error={categoryError}
+          isSaving={isCategorySaving}
+          onClose={() => setIsCategoryModalOpen(false)}
+          onFormChange={setCategoryForm}
+          onSubmit={(event) => void handleCreateCategory(event)}
+        />
+      ) : null}
     </main>
   );
 }
@@ -270,6 +349,116 @@ function CategoryOption({ category, active, onClick }: CategoryOptionProps) {
       </span>
       <span className="mt-2 max-w-full truncate text-sm font-medium text-[#17352a]">{category.name}</span>
     </button>
+  );
+}
+
+function AddCategoryOption({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-[#bfe8d4] bg-[#F7FBF9] p-2 text-[#2f8f66] transition hover:border-[#4CB782]"
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EAF7F1] text-2xl font-semibold">
+        +
+      </span>
+      <span className="mt-2 max-w-full truncate text-sm font-semibold">新增分类</span>
+    </button>
+  );
+}
+
+type AddCategoryModalProps = {
+  form: CategoryFormState;
+  error: string;
+  isSaving: boolean;
+  onClose: () => void;
+  onFormChange: React.Dispatch<React.SetStateAction<CategoryFormState>>;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+};
+
+function AddCategoryModal({
+  form,
+  error,
+  isSaving,
+  onClose,
+  onFormChange,
+  onSubmit,
+}: AddCategoryModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end bg-[#17352a]/25 px-3 pb-3 backdrop-blur-sm sm:items-center sm:justify-center">
+      <section className="w-full max-w-lg rounded-[1.75rem] bg-white p-5 shadow-[0_24px_70px_rgba(23,53,42,0.22)]">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">新增分类</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 w-9 rounded-full bg-[#EAF7F1] text-lg font-semibold text-[#2f8f66]"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="grid gap-4">
+          <div className="grid grid-cols-2 gap-2 rounded-[1.25rem] bg-[#EAF7F1] p-1">
+            <TypeButton
+              active={form.type === 'expense'}
+              label="支出"
+              onClick={() => onFormChange((current) => ({ ...current, type: 'expense' }))}
+            />
+            <TypeButton
+              active={form.type === 'income'}
+              label="收入"
+              onClick={() => onFormChange((current) => ({ ...current, type: 'income' }))}
+            />
+          </div>
+
+          <label className="block">
+            <span className="text-sm font-medium text-[#7a8d84]">分类名称</span>
+            <input
+              type="text"
+              value={form.name}
+              maxLength={12}
+              onChange={(event) => onFormChange((current) => ({ ...current, name: event.target.value }))}
+              placeholder="例如 咖啡、宠物、奖金"
+              className="mt-2 h-12 w-full rounded-[1.1rem] border border-[#dcefe6] bg-[#F7FBF9] px-4 text-base outline-none placeholder:text-[#9fb6aa] focus:border-[#4CB782]"
+            />
+          </label>
+
+          <div>
+            <span className="text-sm font-medium text-[#7a8d84]">颜色</span>
+            <div className="mt-3 grid grid-cols-8 gap-2">
+              {categoryColorOptions.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => onFormChange((current) => ({ ...current, color }))}
+                  className={`h-9 rounded-full border-2 transition ${
+                    form.color === color ? 'border-[#17352a]' : 'border-transparent'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  aria-label={`选择颜色 ${color}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {error ? (
+            <div className="rounded-2xl border border-[#f3b4a8] bg-[#fff0ec] p-3 text-sm font-semibold text-[#8f2c18]">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="h-12 rounded-[1.2rem] bg-[#4CB782] text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#bdd7cb]"
+          >
+            {isSaving ? '保存中' : '保存分类'}
+          </button>
+        </form>
+      </section>
+    </div>
   );
 }
 

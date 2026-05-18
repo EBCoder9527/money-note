@@ -13,9 +13,9 @@ import packageJson from '../../../package.json';
 type SettingsPageProps = {
   selectedMonth: string;
   onMonthChange: (month: string) => void;
-  onOpenAccountManagement: () => void;
+  onOpenAccountManagement?: () => void;
   onOpenCategoryManagement: () => void;
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 export function SettingsPage({
@@ -124,17 +124,24 @@ export function SettingsPage({
   }
 
   return (
-    <main className="min-h-screen bg-[#F7FBF9] text-[#17352a]">
+    <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
         <header className="flex items-center justify-between pt-2">
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6f8178] shadow-[0_10px_28px_rgba(23,53,42,0.06)] transition hover:text-[#2f8f66]"
-          >
-            返回
-          </button>
-          <h1 className="text-xl font-semibold tracking-normal">设置</h1>
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#6f8178] shadow-[0_10px_28px_rgba(23,53,42,0.06)] transition hover:text-[#2f8f66]"
+            >
+              返回
+            </button>
+          ) : (
+            <div>
+              <p className="text-sm font-medium text-[#7a8d84]">个人中心</p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-normal">我的</h1>
+            </div>
+          )}
+          {onBack ? <h1 className="text-xl font-semibold tracking-normal">我的</h1> : null}
           <div className="w-16" />
         </header>
 
@@ -202,12 +209,14 @@ export function SettingsPage({
             description="新增、编辑或删除自定义支出分类，默认分类会被保护。"
             onClick={onOpenCategoryManagement}
           />
-          <SettingsActionRow
-            icon="账"
-            title="资产账户管理"
-            description="管理现金、银行卡、支付账户和负债账户。"
-            onClick={onOpenAccountManagement}
-          />
+          {onOpenAccountManagement ? (
+            <SettingsActionRow
+              icon="账"
+              title="资产账户管理"
+              description="管理现金、银行卡、支付账户和负债账户。"
+              onClick={onOpenAccountManagement}
+            />
+          ) : null}
         </SettingsGroup>
 
         <SettingsGroup
@@ -215,6 +224,11 @@ export function SettingsPage({
           title="有数记账"
           description="本应用优先将数据保存在你的当前设备。"
         >
+          <SettingsInfoRow
+            icon="PWA"
+            title="添加到主屏幕"
+            description="手机浏览器打开线上地址后，可通过分享菜单或浏览器菜单添加到主屏幕。"
+          />
           <SettingsInfoRow
             icon="V"
             title="版本号"

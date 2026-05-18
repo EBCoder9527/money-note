@@ -11,7 +11,7 @@ type HomePageProps = {
   onCreateTransaction: () => void;
   onManageBudget: () => void;
   onOpenStatistics: () => void;
-  onOpenSettings: () => void;
+  onOpenBills: () => void;
 };
 
 export function HomePage({
@@ -21,14 +21,14 @@ export function HomePage({
   onCreateTransaction,
   onManageBudget,
   onOpenStatistics,
-  onOpenSettings,
+  onOpenBills,
 }: HomePageProps) {
   const dashboard = useHomeDashboard(selectedMonth);
 
   return (
-    <main className="min-h-screen bg-[#F7FBF9] text-[#17352a]">
+    <main className="min-h-screen bg-[#F7FBF9] pb-28 text-[#17352a]">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 sm:px-6 sm:py-8">
-        <HomeHeader onOpenSettings={onOpenSettings} />
+        <HomeHeader />
         <MonthSwitcher selectedMonth={selectedMonth} onChange={onMonthChange} />
         {successMessage ? (
           <div className="rounded-[1.35rem] border border-[#bfe8d4] bg-white p-4 text-sm font-semibold text-[#2f8f66] shadow-[0_12px_36px_rgba(76,183,130,0.10)]">
@@ -39,12 +39,7 @@ export function HomePage({
         <QuickActions
           onCreateTransaction={onCreateTransaction}
           onOpenStatistics={onOpenStatistics}
-          onOpenBills={() => {
-            document.getElementById('recent-transactions')?.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start',
-            });
-          }}
+          onOpenBills={onOpenBills}
         />
         <RecentTransactions transactions={dashboard.recentTransactions} isLoading={dashboard.isLoading} />
       </div>
@@ -52,18 +47,10 @@ export function HomePage({
   );
 }
 
-function HomeHeader({ onOpenSettings }: { onOpenSettings: () => void }) {
+function HomeHeader() {
   return (
     <header className="flex items-center justify-between pt-2">
       <AppLogo />
-      <button
-        type="button"
-        onClick={onOpenSettings}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#dcefe6] bg-white text-lg font-semibold text-[#2f8f66] shadow-[0_10px_28px_rgba(23,53,42,0.06)] transition hover:border-[#4CB782] hover:bg-[#F7FBF9] active:scale-[0.98]"
-        aria-label="打开设置"
-      >
-        ⚙
-      </button>
     </header>
   );
 }
