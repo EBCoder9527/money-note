@@ -23,28 +23,28 @@ export function formatPlainAmount(amount: number): string {
   return normalizeAmount(amount).toFixed(2);
 }
 
-export function formatCalendarAmount(amount: number): string {
+export function formatCompactAmount(amount: number): string {
   const normalizedAmount = normalizeAmount(amount);
 
-  if (normalizedAmount >= 100000000) {
-    return `${trimCompactNumber(normalizedAmount / 100000000)}亿`;
-  }
-
   if (normalizedAmount >= 10000) {
-    return `${trimCompactNumber(normalizedAmount / 10000)}万`;
+    return `${trimCompactNumber(normalizedAmount / 10000)}w`;
   }
 
-  if (normalizedAmount >= 100) {
-    return String(Math.round(normalizedAmount));
+  if (normalizedAmount >= 1000) {
+    return `${trimCompactNumber(normalizedAmount / 1000)}k`;
   }
 
-  if (normalizedAmount >= 10 && normalizedAmount % 1 === 0) {
+  if (normalizedAmount >= 10) {
     return String(Math.round(normalizedAmount));
   }
 
   return normalizedAmount % 1 === 0
     ? String(Math.round(normalizedAmount))
     : trimCompactNumber(normalizedAmount);
+}
+
+export function formatCalendarAmount(amount: number): string {
+  return formatCompactAmount(amount);
 }
 
 function trimCompactNumber(value: number): string {

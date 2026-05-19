@@ -229,7 +229,7 @@ export function NewTransactionPage({ onCancel, onSaved }: NewTransactionPageProp
           {categories.length === 0 ? (
             <p className="py-8 text-center text-sm text-[#7a8d84]">分类正在整理中，请稍后再试。</p>
           ) : (
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
               {categories.map((category) => (
                 <CategoryOption
                   key={category.id}
@@ -337,7 +337,7 @@ function CategoryOption({ category, active, onClick }: CategoryOptionProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-24 flex-col items-center justify-center rounded-2xl border p-2 transition ${
+      className={`flex min-h-28 flex-col items-center justify-center rounded-2xl border p-2.5 transition ${
         active ? 'border-[#4CB782] bg-[#F7FBF9]' : 'border-[#dcefe6] bg-white'
       }`}
     >
@@ -347,7 +347,9 @@ function CategoryOption({ category, active, onClick }: CategoryOptionProps) {
       >
         {category.name[0]}
       </span>
-      <span className="mt-2 max-w-full truncate text-sm font-medium text-[#17352a]">{category.name}</span>
+      <span className="mt-2 max-w-full overflow-hidden break-all text-center text-sm font-medium leading-tight text-[#17352a] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+        {category.name}
+      </span>
     </button>
   );
 }
@@ -357,12 +359,12 @@ function AddCategoryOption({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-[#bfe8d4] bg-[#F7FBF9] p-2 text-[#2f8f66] transition hover:border-[#4CB782]"
+      className="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-dashed border-[#bfe8d4] bg-[#F7FBF9] p-2.5 text-[#2f8f66] transition hover:border-[#4CB782]"
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#EAF7F1] text-2xl font-semibold">
         +
       </span>
-      <span className="mt-2 max-w-full truncate text-sm font-semibold">新增分类</span>
+      <span className="mt-2 max-w-full text-center text-sm font-semibold leading-tight">新增分类</span>
     </button>
   );
 }

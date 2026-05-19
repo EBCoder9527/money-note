@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { MonthSwitcher } from '@/components/MonthSwitcher';
 import type { Category } from '@/data/models';
-import { formatCalendarAmount, formatCurrency, formatPlainAmount } from '@/utils/money';
+import { formatCompactAmount, formatCurrency, formatPlainAmount } from '@/utils/money';
 import { getMonthLabel } from '@/utils/month';
 import type {
   CategoryExpenseRankingItem,
@@ -237,7 +237,7 @@ function CalendarDayButton({ day, isSelected, isToday, onSelectDate }: CalendarD
           className="mt-1 w-full rounded-full bg-[#fff0ec] px-0.5 py-0.5 text-center text-[0.62rem] font-bold leading-4 tracking-normal text-[#d65a54] tabular-nums"
           title={formatCurrency(day.amount)}
         >
-          {formatCalendarAmount(day.amount)}
+          {formatCompactAmount(day.amount)}
         </p>
       ) : null}
     </button>
@@ -251,12 +251,17 @@ type DailyTransactionListProps = {
 };
 
 function DailyTransactionList({ selectedDate, transactions, isLoading }: DailyTransactionListProps) {
+  const dayExpenseTotal = transactions.reduce((total, transaction) => total + transaction.amount, 0);
+
   return (
     <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_18px_45px_rgba(23,53,42,0.07)]">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{selectedDate} 消费记录</h2>
-        <span className="shrink-0 rounded-full bg-[#F7FBF9] px-3 py-1 text-sm text-[#7a8d84]">
-          {transactions.length} 笔
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold">{selectedDate} 消费记录</h2>
+          <p className="mt-1 text-xs text-[#7a8d84]">{transactions.length} 笔</p>
+        </div>
+        <span className="shrink-0 rounded-full bg-[#EAF7F1] px-3 py-1 text-sm font-semibold text-[#2f8f66]">
+          {formatCurrency(dayExpenseTotal)}
         </span>
       </div>
 
