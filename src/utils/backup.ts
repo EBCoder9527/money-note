@@ -2,10 +2,12 @@ import dayjs from 'dayjs';
 import { db } from '@/data/db';
 import type { Account, AccountKind, Budget, Category, Transaction, TransactionType } from '@/data/models';
 import { createId, nowIso } from '@/data/utils/entity';
+import { markBackupExported } from '@/utils/backupReminder';
 import { normalizeAmount } from '@/utils/money';
 
 const backupVersion = 2;
 const appName = '有数记账';
+const backupAppId = 'youshu';
 const defaultImportCategoryColor = '#4CB782';
 const defaultImportAccountColor = '#14b8a6';
 
@@ -92,23 +94,25 @@ export type ImportTransactionsResult = {
 
 type ImportableRecord = Record<string, unknown>;
 
-export async function exportBackupJson(): Promise<void> {
+export async function exportBackupJson(): Promise<string> {
   const [transactions, categories, budgets, accounts] = await Promise.all([
     db.transactions.toArray(),
     db.categories.toArray(),
     db.budgets.toArray(),
     db.accounts.toArray(),
   ]);
-  const backup: BackupFile = {
-    appName,
-    schemaVersion: backupVersion,
-    version: backupVersion,
-    exportedAt: new Date().toISOString(),
+  const exportedAt = new Date().toISOString();
+  const backup = {
+    app: backupAppId,
+    version: 1,
+    exportedAt,
     data: {
-      transactions,
+      records: transactions,
       categories,
       budgets,
-      accounts,
+      settings: {
+        accounts,
+      },
     },
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], {
@@ -118,12 +122,14 @@ export async function exportBackupJson(): Promise<void> {
   const link = document.createElement('a');
 
   link.href = url;
-  link.download = `有数备份-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `有数备份_${dayjs(exportedAt).format('YYYY-MM-DD_HH-mm')}.json`;
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  markBackupExported(exportedAt);
+  return exportedAt;
 }
 
 export async function restoreBackup(file: File): Promise<RestoreBackupResult> {
@@ -338,6 +344,10 @@ function validateBackupFile(value: unknown): BackupFile {
     throw new Error('备份文件格式不正确。');
   }
 
+  if (value.app !== undefined) {
+    return validateYoushuBackupFile(value);
+  }
+
   const schemaVersion = typeof value.schemaVersion === 'number' ? value.schemaVersion : value.version;
 
   if (typeof value.version !== 'number' || ![1, backupVersion].includes(value.version)) {
@@ -394,6 +404,58 @@ function validateBackupFile(value: unknown): BackupFile {
     exportedAt: value.exportedAt,
     data: {
       transactions,
+      categories,
+      budgets,
+      accounts,
+    },
+  };
+}
+
+function validateYoushuBackupFile(value: Record<string, unknown>): BackupFile {
+  if (value.app !== backupAppId) {
+    throw new Error('备份来源不是有数记账。');
+  }
+
+  if (value.version !== 1) {
+    throw new Error('备份版本不支持。');
+  }
+
+  if (typeof value.exportedAt !== 'string' || Number.isNaN(Date.parse(value.exportedAt))) {
+    throw new Error('备份导出时间无效。');
+  }
+
+  if (!isRecord(value.data)) {
+    throw new Error('备份数据缺失。');
+  }
+
+  const { records = [], categories = [], budgets = [], settings = {} } = value.data;
+  const accounts = isRecord(settings) && Array.isArray(settings.accounts) ? settings.accounts : [];
+
+  if (!Array.isArray(records) || !Array.isArray(categories) || !Array.isArray(budgets)) {
+    throw new Error('备份数据必须包含 records、categories、budgets。');
+  }
+
+  if (!records.every(isTransaction)) {
+    throw new Error('records 数据格式不正确。');
+  }
+
+  if (!categories.every(isCategory)) {
+    throw new Error('categories 数据格式不正确。');
+  }
+
+  if (!budgets.every(isBudget)) {
+    throw new Error('budgets 数据格式不正确。');
+  }
+
+  if (!accounts.every(isAccount)) {
+    throw new Error('settings.accounts 数据格式不正确。');
+  }
+
+  return {
+    version: value.version,
+    exportedAt: value.exportedAt,
+    data: {
+      transactions: records,
       categories,
       budgets,
       accounts,
@@ -683,7 +745,7 @@ function valueToText(value: unknown): string {
 function looksLikeBackupFile(value: unknown): boolean {
   return (
     isRecord(value) &&
-    ('version' in value || 'schemaVersion' in value || 'exportedAt' in value) &&
+    ('app' in value || 'version' in value || 'schemaVersion' in value || 'exportedAt' in value) &&
     'data' in value
   );
 }

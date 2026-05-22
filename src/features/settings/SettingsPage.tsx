@@ -15,6 +15,11 @@ import {
   type ImportPreviewRow,
   type TransactionImportPreview,
 } from '@/utils/backup';
+import {
+  formatBackupTime,
+  getBackupReminderMetadata,
+  type BackupReminderMetadata,
+} from '@/utils/backupReminder';
 import { exportCsv, type CsvRow } from '@/utils/exportCsv';
 import { formatCurrency, formatPlainAmount } from '@/utils/money';
 import { getMonthLabel, getMonthRangeIso } from '@/utils/month';
@@ -43,6 +48,7 @@ export function SettingsPage({
   const [backupFileToImport, setBackupFileToImport] = useState<File | null>(null);
   const [transactionImportPreview, setTransactionImportPreview] = useState<TransactionImportPreview | null>(null);
   const [transactionImportResult, setTransactionImportResult] = useState<ImportTransactionsResult | null>(null);
+  const [backupMetadata, setBackupMetadata] = useState<BackupReminderMetadata>(() => getBackupReminderMetadata());
   const backupInputRef = useRef<HTMLInputElement>(null);
   const transactionInputRef = useRef<HTMLInputElement>(null);
   const monthKey = selectedMonth;
@@ -93,7 +99,8 @@ export function SettingsPage({
 
     try {
       await exportBackupJson();
-      setMessage('全部数据备份已导出');
+      setBackupMetadata(getBackupReminderMetadata());
+      setMessage('备份已导出，请妥善保存文件。');
     } catch (backupError) {
       setError(backupError instanceof Error ? backupError.message : '备份导出失败，请稍后再试');
     } finally {
@@ -250,10 +257,15 @@ export function SettingsPage({
         <BrandPanel />
 
         <SettingsGroup
-          eyebrow="数据管理"
-          title="导出与备份"
+          eyebrow="数据安全"
+          title="备份与导入"
           description={`当前选择月份：${monthLabel}`}
-          beforeList={<MonthSwitcher selectedMonth={selectedMonth} onChange={onMonthChange} />}
+          beforeList={
+            <>
+              <MonthSwitcher selectedMonth={selectedMonth} onChange={onMonthChange} />
+              <BackupStatusCard lastBackupAt={backupMetadata.lastBackupAt} />
+            </>
+          }
         >
           <SettingsActionRow
             icon="CSV"
@@ -265,17 +277,17 @@ export function SettingsPage({
           />
           <SettingsActionRow
             icon="JSON"
-            title="导出全部数据 JSON"
-            description="备份账单、分类、预算和账户数据，便于迁移或恢复。"
-            actionLabel={isBackingUp ? '导出中' : '备份'}
+            title="导出备份"
+            description="一键导出账单、分类、预算和账户数据，建议定期保存。"
+            actionLabel={isBackingUp ? '导出中' : '导出'}
             disabled={isBackingUp || isImporting}
             onClick={handleExportBackup}
           />
           <SettingsActionRow
             icon="IN"
-            title="恢复备份"
+            title="导入备份"
             description="导入本产品导出的完整 JSON 备份，同 ID 数据会更新。"
-            actionLabel={isImporting ? '恢复中' : '恢复'}
+            actionLabel={isImporting ? '导入中' : '导入'}
             disabled={isBackingUp || isImporting}
             onClick={() => backupInputRef.current?.click()}
           />
@@ -366,9 +378,9 @@ export function SettingsPage({
       </div>
       <ConfirmDialog
         open={Boolean(backupFileToImport)}
-        title="恢复备份？"
-        description="恢复备份会合并写入本地数据：同 ID 数据将更新，不同 ID 数据将新增。不会清空现有数据。"
-        confirmLabel="恢复"
+        title="导入备份？"
+        description="导入备份会合并写入本地数据：同 ID 数据将更新，不同 ID 数据将新增。不会清空现有数据。"
+        confirmLabel="导入"
         onCancel={cancelRestoreBackup}
         onConfirm={() => void confirmRestoreBackup()}
       />
@@ -431,6 +443,18 @@ function TransactionImportResultDialog({ result, onClose }: TransactionImportRes
           知道了
         </button>
       </section>
+    </div>
+  );
+}
+
+function BackupStatusCard({ lastBackupAt }: { lastBackupAt?: string }) {
+  return (
+    <div className="mt-4 rounded-[1.35rem] border border-[#dcefe6] bg-[#F7FBF9] p-4">
+      <p className="text-sm font-semibold text-[#17352a]">最近备份时间</p>
+      <p className="mt-1 text-sm text-[#7a8d84]">{formatBackupTime(lastBackupAt)}</p>
+      <p className="mt-3 text-xs leading-5 text-[#8ba097]">
+        备份文件会下载到当前设备，请妥善保存到云盘、电脑或其他安全位置。
+      </p>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BackToTop } from '@/components/BackToTop';
+import { BackupReminderDialog } from '@/components/BackupReminderDialog';
 import { BottomTabNav, type MainTab } from '@/components/BottomTabNav';
 import { SplashScreen } from '@/components/SplashScreen';
+import { Toast } from '@/components/Toast';
 import { AccountManagementPage } from '@/features/account/AccountManagementPage';
 import { BillsPage } from '@/features/bills/BillsPage';
 import { BudgetPage } from '@/features/budget/BudgetPage';
@@ -10,6 +12,8 @@ import { HomePage } from '@/features/home/HomePage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { StatisticsPage } from '@/features/statistics/StatisticsPage';
 import { NewTransactionPage } from '@/features/transaction/NewTransactionPage';
+import { exportBackupJson } from '@/utils/backup';
+import { dismissBackupReminder, shouldShowBackupReminder } from '@/utils/backupReminder';
 import { getCurrentMonthKey } from '@/utils/month';
 
 type AppView =
@@ -24,6 +28,12 @@ const mainTabs: MainTab[] = ['home', 'bills', 'statistics', 'accounts', 'setting
 export function App() {
   const [view, setView] = useState<AppView>('home');
   const [successMessage, setSuccessMessage] = useState('');
+  const [globalToast, setGlobalToast] = useState<{ message: string; type: 'success' | 'error' }>({
+    message: '',
+    type: 'success',
+  });
+  const [isBackupReminderOpen, setIsBackupReminderOpen] = useState(false);
+  const [isBackupExporting, setIsBackupExporting] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
 
   useEffect(() => {
@@ -34,6 +44,40 @@ export function App() {
     const timer = window.setTimeout(() => setSuccessMessage(''), 2400);
     return () => window.clearTimeout(timer);
   }, [successMessage]);
+
+  useEffect(() => {
+    if (view !== 'home') {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (shouldShowBackupReminder()) {
+        setIsBackupReminderOpen(true);
+      }
+    }, 800);
+
+    return () => window.clearTimeout(timer);
+  }, [view]);
+
+  function handleDismissBackupReminder() {
+    dismissBackupReminder();
+    setIsBackupReminderOpen(false);
+  }
+
+  async function handleReminderBackupExport() {
+    setIsBackupExporting(true);
+    setGlobalToast({ message: '', type: 'success' });
+
+    try {
+      await exportBackupJson();
+      setIsBackupReminderOpen(false);
+      setGlobalToast({ message: '备份已导出，请妥善保存文件。', type: 'success' });
+    } catch {
+      setGlobalToast({ message: '备份导出失败，请稍后重试。', type: 'error' });
+    } finally {
+      setIsBackupExporting(false);
+    }
+  }
 
   let content;
 
@@ -132,6 +176,17 @@ export function App() {
         />
       ) : null}
       <BackToTop />
+      <Toast
+        message={globalToast.message}
+        type={globalToast.type}
+        onClose={() => setGlobalToast((current) => ({ ...current, message: '' }))}
+      />
+      <BackupReminderDialog
+        open={isBackupReminderOpen}
+        isExporting={isBackupExporting}
+        onDismiss={handleDismissBackupReminder}
+        onExport={() => void handleReminderBackupExport()}
+      />
       <SplashScreen />
     </>
   );
